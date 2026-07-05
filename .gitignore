@@ -1,0 +1,30 @@
+# Local build output
+build/
+out/
+bin/
+gen/
+libs/
+
+# Android / Gradle
+.gradle/
+.kotlin/
+.cxx/
+.externalNativeBuild/
+local.properties
+*.apk
+*.ap_
+*.aab
+output.json
+output-metadata.json
+*.iml
+
+# IDE / OS
+.idea/
+.vscode/
+.vs/
+*pro.user
+Thumbs.db
+.DS_Store
+
+# Packaged release artifacts
+release-artifacts/

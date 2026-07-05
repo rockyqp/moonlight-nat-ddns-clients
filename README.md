@@ -27,6 +27,18 @@ docs/
   nat-ddns-api.md                 # 网站接口格式
 ```
 
+## 源码和许可证声明
+
+本仓库包含 Moonlight 官方开源客户端的修改版：
+
+- `clients/moonlight-android` 基于 [moonlight-stream/moonlight-android](https://github.com/moonlight-stream/moonlight-android) 修改。
+- `clients/moonlight-qt` 基于 [moonlight-stream/moonlight-qt](https://github.com/moonlight-stream/moonlight-qt) 修改。
+- 两个 Moonlight 客户端目录内保留了上游 README、作者信息和 GPLv3 许可证文件。
+- 本仓库发布完整修改源码，供用户按 GPLv3 获取、研究、修改和重新编译。
+- 本项目不是 Moonlight 官方项目，也不代表 Moonlight/Sunshine 官方维护者。
+
+更多说明见 [NOTICE.md](NOTICE.md)。
+
 ## 推荐使用方式
 
 优先使用：

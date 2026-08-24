@@ -80,6 +80,60 @@ private:
         return true;
     }
 
+    static bool natDdnsEndpointChanged(const NatDdnsMapping& oldMapping, const NatDdnsMapping& newMapping)
+    {
+        return oldMapping.host != newMapping.host ||
+               oldMapping.tcp != newMapping.tcp ||
+               oldMapping.udp != newMapping.udp;
+    }
+
+    bool refreshNatDdnsMapping(const char* reason, bool& changed)
+    {
+        NatDdnsMapping oldMapping;
+        {
+            QReadLocker lock(&m_Computer->lock);
+            if (!m_Computer->natDdnsEnabled) {
+                return false;
+            }
+            oldMapping = m_Computer->natDdnsMapping;
+        }
+
+        QString error;
+        if (!m_Computer->refreshNatDdnsMapping(&error)) {
+            qWarning() << "NAT-DDNS refresh failed for" << m_Computer->name << reason << ":" << error;
+            return false;
+        }
+
+        {
+            QReadLocker lock(&m_Computer->lock);
+            if (natDdnsEndpointChanged(oldMapping, m_Computer->natDdnsMapping)) {
+                changed = true;
+            }
+        }
+
+        return true;
+    }
+
+    bool pollAllAddresses(QNetworkAccessManager* nam, bool wasOnline, bool& stateChanged)
+    {
+        for (int i = 0; i < (wasOnline ? TRIES_BEFORE_OFFLINING : 1); i++) {
+            for (auto& address : m_Computer->uniqueAddresses()) {
+                if (isInterruptionRequested()) {
+                    return false;
+                }
+
+                if (tryPollComputer(nam, address, stateChanged)) {
+                    if (!wasOnline) {
+                        qInfo() << m_Computer->name << "is now online at" << m_Computer->activeAddress.toString();
+                    }
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     void run() override
     {
         // Reduce the power and performance impact of our
@@ -99,37 +153,21 @@ private:
 
         // Always fetch the applist the first time
         int pollsSinceLastAppListFetch = POLLS_PER_APPLIST_FETCH;
+        bool refreshedNatDdnsAfterStart = false;
         while (!isInterruptionRequested()) {
             bool stateChanged = false;
-            bool online = false;
             bool wasOnline = m_Computer->state == NvComputer::CS_ONLINE;
+            bool refreshedNatDdnsThisPoll = false;
 
-            {
-                QReadLocker lock(&m_Computer->lock);
-                bool needsInitialNatDdnsRefresh = m_Computer->natDdnsEnabled && !m_Computer->natDdnsMapping.isValid();
-                lock.unlock();
-                if (needsInitialNatDdnsRefresh) {
-                    QString error;
-                    if (!m_Computer->refreshNatDdnsMapping(&error)) {
-                        qWarning() << "NAT-DDNS refresh failed for" << m_Computer->name << ":" << error;
-                    }
-                }
+            if (!refreshedNatDdnsAfterStart) {
+                refreshedNatDdnsThisPoll = refreshNatDdnsMapping("before polling", stateChanged);
+                refreshedNatDdnsAfterStart = true;
             }
 
-            for (int i = 0; i < (wasOnline ? TRIES_BEFORE_OFFLINING : 1) && !online; i++) {
-                for (auto& address : m_Computer->uniqueAddresses()) {
-                    if (isInterruptionRequested()) {
-                        return;
-                    }
-
-                    if (tryPollComputer(&nam, address, stateChanged)) {
-                        if (!wasOnline) {
-                            qInfo() << m_Computer->name << "is now online at" << m_Computer->activeAddress.toString();
-                        }
-                        online = true;
-                        break;
-                    }
-                }
+            bool online = pollAllAddresses(&nam, wasOnline, stateChanged);
+            if (!online && !refreshedNatDdnsThisPoll &&
+                    refreshNatDdnsMapping("after polling failure", stateChanged)) {
+                online = pollAllAddresses(&nam, wasOnline, stateChanged);
             }
 
             // Check if we failed after all retry attempts

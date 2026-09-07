@@ -1,4 +1,6 @@
-# Moonlight NAT-DDNS Clients
+# STUNDDNS 跨平台串流客户端
+
+支持 Android 和 Windows 的非官方 Moonlight NAT-DDNS 客户端项目，另含可选的 Android VPN Adapter 实验工具。
 
 本仓库包含一套配合 `stunddns.top` 使用的 Moonlight/Sunshine NAT-DDNS 客户端改造。目标是在没有公网 IPv4 的家庭宽带、移动宽带或内网环境下，尽量通过路由器 Lucky 的 STUN 打洞能力建立直连串流，而不是让 VPS 中继视频流。
 
